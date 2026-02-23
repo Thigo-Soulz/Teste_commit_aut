@@ -1,6 +1,4 @@
 @echo off
-cd /d D:\Teste_commit_aut
-
+cd /d "%~dp0"
 powershell -ExecutionPolicy Bypass -File auto_watch2.ps1
-
 pause
