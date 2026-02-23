@@ -1,45 +1,32 @@
 cd $PSScriptRoot
 
+Write-Host "Monitoramento em tempo real iniciado..."
+
 # ===============================
-# CONFIGURAÇÃO GIT (EDITAR)
+# CONFIGURAÇÃO GIT
 # ===============================
+
 $GitUser = "Thigo-Soulz"
 $GitEmail = "thiago.vilhena46@gmail.com"
 
-# Verificar configuração global Git
-$Name = git config --global user.name
-$Email = git config --global user.email
-
-if ($Name -ne $GitUser -or $Email -ne $GitEmail) {
-    Write-Host "Configurando Git..."
-
-    git config --global user.name $GitUser
-    git config --global user.email $GitEmail
-
-    Write-Host "Git configurado!"
-}
-else {
-    Write-Host "Conta Git já configurada."
-}
-
-Write-Host "Monitoramento em tempo real iniciado..."
+git config --global user.name $GitUser
+git config --global user.email $GitEmail
 
 $projectPath = $PSScriptRoot
 
-# Criar FileWatcher
-$watcher = New-Object System.IO.FileSystemWatcher
-$watcher.Path = $projectPath
-$watcher.IncludeSubdirectories = $true
-$watcher.EnableRaisingEvents = $true
+# ===============================
+# FUNÇÃO AUTO COMMIT
+# ===============================
 
-# Ação de auto commit
-$action = {
+function AutoCommit {
+
     try {
-        Set-Location $using:projectPath
+
+        Set-Location $projectPath
 
         git add .
 
-        # Verificar mudanças
+        # Evita commit vazio
         if (git diff --cached --quiet) {
             return
         }
@@ -48,17 +35,26 @@ $action = {
         git push
 
         Write-Host "Backup salvo automaticamente!"
+
     }
     catch {
-        Write-Host "Erro no auto commit"
+        Write-Host $_.Exception.Message
     }
 }
 
-# Eventos monitorados
-Register-ObjectEvent $watcher Changed -Action $action
-Register-ObjectEvent $watcher Created -Action $action
-Register-ObjectEvent $watcher Deleted -Action $action
-Register-ObjectEvent $watcher Renamed -Action $action
+# ===============================
+# FILE WATCHER
+# ===============================
+
+$watcher = New-Object System.IO.FileSystemWatcher
+$watcher.Path = $projectPath
+$watcher.IncludeSubdirectories = $true
+$watcher.EnableRaisingEvents = $true
+
+Register-ObjectEvent $watcher Changed -Action { AutoCommit }
+Register-ObjectEvent $watcher Created -Action { AutoCommit }
+Register-ObjectEvent $watcher Deleted -Action { AutoCommit }
+Register-ObjectEvent $watcher Renamed -Action { AutoCommit }
 
 # Manter script rodando
 while ($true) {
